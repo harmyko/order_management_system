@@ -1,9 +1,8 @@
 import customtkinter as ctk
 import sqlite3
-from tkinter import messagebox
+from tkinter import messagebox, Listbox
 import hashlib
 from datetime import datetime
-from tkinter import Text
 
 class Login_Window(ctk.CTk):
     def __init__(self):
@@ -83,6 +82,10 @@ class App(ctk.CTkToplevel):
         self.id_entry.grid(row=0, column=1, padx=5, pady=5, sticky='w')
         self.id_entry.insert(0, self.get_next_id())
 
+        self.view_orders_button = ctk.CTkButton(self.form_frame, width=270, text="Peržiūrėti užsakymus", command=self.open_orders_window)
+        self.view_orders_button.grid(row=0, column=2, columnspan=2, pady=10, sticky='e')
+
+
         self.name_label = ctk.CTkLabel(self.form_frame, text="Vardas:")
         self.name_label.grid(row=1, column=0, padx=5, pady=5)
         self.name_entry = ctk.CTkEntry(self.form_frame)
@@ -118,8 +121,8 @@ class App(ctk.CTkToplevel):
         self.submit_button = ctk.CTkButton(self.form_frame, width=420, text="Pridėti naują užsakymą", command=self.submit_order)
         self.submit_button.grid(row=5, column=0, columnspan=4, pady=10, sticky='e')
 
-        self.submit_button = ctk.CTkButton(self.form_frame, width=420, text="Atnaujinti užsakymą", command=self.submit_order)
-        self.submit_button.grid(row=6, column=0, columnspan=4, pady=0, sticky='e')
+        self.update_button = ctk.CTkButton(self.form_frame, width=420, text="Atnaujinti užsakymą", command=self.submit_order)
+        self.update_button.grid(row=6, column=0, columnspan=4, pady=0, sticky='e')
 
     def get_next_id(self):
         conn = sqlite3.connect('orders.db')
@@ -174,9 +177,67 @@ class App(ctk.CTkToplevel):
         self.state_entry.set('')
         self.description_entry.delete("1.0", 'end')
 
+    def open_orders_window(self):
+        orders_window = OrdersWindow(self)
+        orders_window.grab_set()
+
     def on_closing(self):
         self.destroy()
         self.master.destroy()
+
+class OrdersWindow(ctk.CTkToplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title('Peržiūrėti užsakymus')
+        self.geometry('800x400')
+        self.minsize(600, 400)
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        self.orders_listbox = Listbox(self)
+        self.orders_listbox.pack(fill='both', expand=True, padx=20, pady=20)
+
+        self.load_orders()
+
+        self.select_button = ctk.CTkButton(self, text="Pasirinkti užsakymą", command=self.select_order)
+        self.select_button.pack(pady=10)
+
+    def load_orders(self):
+        conn = sqlite3.connect('orders.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, phone_number, email_address, date, current_order_state, description FROM orders")
+        orders = cursor.fetchall()
+        conn.close()
+
+        for order in orders:
+            self.orders_listbox.insert('end', f"ID: {order[0]}, Vardas: {order[1]}, Telefonas: {order[2]}, El. paštas: {order[3]}, Data: {order[4]}, Būsena: {order[5]}, Aprašymas: {order[6]}")
+
+    def select_order(self):
+        selected_order = self.orders_listbox.get(self.orders_listbox.curselection())
+        order_id = selected_order.split(",")[0].split(":")[1].strip()
+
+        conn = sqlite3.connect('orders.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
+        order = cursor.fetchone()
+        conn.close()
+
+        self.master.id_entry.delete(0, 'end')
+        self.master.id_entry.insert(0, order[0])
+        self.master.name_entry.delete(0, 'end')
+        self.master.name_entry.insert(0, order[1])
+        self.master.phone_entry.delete(0, 'end')
+        self.master.phone_entry.insert(0, order[2])
+        self.master.email_entry.delete(0, 'end')
+        self.master.email_entry.insert(0, order[3])
+        self.master.date_entry.delete(0, 'end')
+        self.master.date_entry.insert(0, order[4])
+        self.master.state_entry.set(order[5])
+        self.master.description_entry.delete("1.0", 'end')
+        self.master.description_entry.insert("1.0", order[6])
+
+        self.destroy()
 
 if __name__ == "__main__":
     ctk.set_appearance_mode("dark")
