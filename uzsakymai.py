@@ -1,10 +1,10 @@
 import customtkinter as ctk
 import sqlite3
-from tkinter import messagebox, Listbox
 import hashlib
+from tkinter import messagebox, Listbox
 from datetime import datetime
 
-class Login_Window(ctk.CTk):
+class LoginWindow(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title('Login')
@@ -52,10 +52,10 @@ class Login_Window(ctk.CTk):
 
     def open_app(self):
         self.withdraw()
-        app = App(self)
+        app = MainWindow(self)
         app.mainloop()
 
-class App(ctk.CTkToplevel):
+class MainWindow(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
         self.title('Užsakymai')
@@ -121,7 +121,7 @@ class App(ctk.CTkToplevel):
         self.submit_button = ctk.CTkButton(self.form_frame, width=420, text="Pridėti naują užsakymą", command=self.submit_order)
         self.submit_button.grid(row=5, column=0, columnspan=4, pady=10, sticky='e')
 
-        self.update_button = ctk.CTkButton(self.form_frame, width=420, text="Atnaujinti užsakymą", command=self.submit_order)
+        self.update_button = ctk.CTkButton(self.form_frame, width=420, text="Atnaujinti užsakymą", command=self.update_order)
         self.update_button.grid(row=6, column=0, columnspan=4, pady=0, sticky='e')
 
     def get_next_id(self):
@@ -147,7 +147,7 @@ class App(ctk.CTkToplevel):
         cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS orders (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id INTEGER PRIMARY KEY,
                 name TEXT,
                 phone_number TEXT,
                 email_address TEXT,
@@ -162,6 +162,44 @@ class App(ctk.CTkToplevel):
         conn.close()
 
         messagebox.showinfo("Užsakymas pridėtas", "Naujas užsakymas buvo sėkmingai pridėtas į užsakymų sąrašą.")
+        self.clear_entries()
+
+        self.id_entry.delete(0, 'end')
+        self.id_entry.insert(0, self.get_next_id())
+
+    def update_order(self):
+        id = self.id_entry.get()
+        name = self.name_entry.get()
+        phone = self.phone_entry.get()
+        email = self.email_entry.get()
+        date = self.date_entry.get()
+        state = self.state_entry.get()
+        description = self.description_entry.get("1.0", 'end').strip()
+
+        conn = sqlite3.connect('orders.db')
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS orders (
+                id INTEGER PRIMARY KEY,
+                name TEXT,
+                phone_number TEXT,
+                email_address TEXT,
+                date TEXT,
+                current_order_state TEXT,
+                description TEXT
+            )
+        """)
+
+        cursor.execute("""
+            UPDATE orders
+            SET name = ?, phone_number = ?, email_address = ?, date = ?, current_order_state = ?, description = ?
+            WHERE id = ?
+        """, (name, phone, email, date, state, description, id))
+
+        conn.commit()
+        conn.close()
+
+        messagebox.showinfo("Užsakymas atnaujintas", "Užsakymas buvo sėkmingai atnaujintas!")
         self.clear_entries()
 
         self.id_entry.delete(0, 'end')
@@ -188,7 +226,7 @@ class App(ctk.CTkToplevel):
 class OrdersWindow(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
-        self.title('Peržiūrėti užsakymus')
+        self.title('Užsakymų sąrašas')
         self.geometry('800x400')
         self.minsize(600, 400)
 
@@ -242,5 +280,5 @@ class OrdersWindow(ctk.CTkToplevel):
 if __name__ == "__main__":
     ctk.set_appearance_mode("dark")
     ctk.set_default_color_theme("blue")
-    loginWindow = Login_Window()
+    loginWindow = LoginWindow()
     loginWindow.mainloop()
