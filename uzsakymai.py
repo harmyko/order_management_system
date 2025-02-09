@@ -1,7 +1,7 @@
 import customtkinter as ctk
 import sqlite3
 import hashlib
-from tkinter import messagebox, Listbox
+from tkinter import messagebox, ttk
 from datetime import datetime
 
 class LoginWindow(ctk.CTk):
@@ -85,7 +85,6 @@ class MainWindow(ctk.CTkToplevel):
         self.view_orders_button = ctk.CTkButton(self.form_frame, width=270, text="Peržiūrėti užsakymus", command=self.open_orders_window)
         self.view_orders_button.grid(row=0, column=2, columnspan=2, pady=10, sticky='e')
 
-
         self.name_label = ctk.CTkLabel(self.form_frame, text="Vardas:")
         self.name_label.grid(row=1, column=0, padx=5, pady=5)
         self.name_entry = ctk.CTkEntry(self.form_frame)
@@ -115,7 +114,7 @@ class MainWindow(ctk.CTkToplevel):
 
         self.description_label = ctk.CTkLabel(self.form_frame, text="Aprašymas:")
         self.description_label.grid(row=4, column=0, padx=5, pady=5)
-        self.description_entry = ctk.CTkTextbox(self.form_frame, width=400, height=100)
+        self.description_entry = ctk.CTkTextbox(self.form_frame, width=400, height=100, wrap='word')
         self.description_entry.grid(row=4, column=1, padx=5, pady=5, columnspan=3)
 
         self.submit_button = ctk.CTkButton(self.form_frame, width=420, text="Pridėti naują užsakymą", command=self.submit_order)
@@ -123,6 +122,17 @@ class MainWindow(ctk.CTkToplevel):
 
         self.update_button = ctk.CTkButton(self.form_frame, width=420, text="Atnaujinti užsakymą", command=self.update_order)
         self.update_button.grid(row=6, column=0, columnspan=4, pady=0, sticky='e')
+
+        def delete_previous_word(event):
+            widget = event.widget
+            index = widget.index("insert")
+            prev_space = widget.search(r'\s', index, stopindex="1.0", backwards=True, regexp=True)
+            if prev_space:
+                widget.delete(prev_space + "+2c", index)
+            else:
+                widget.delete("1.0", index)
+
+        self.description_entry.bind("<Control-BackSpace>", delete_previous_word)
 
     def get_next_id(self):
         conn = sqlite3.connect('orders.db')
@@ -233,8 +243,22 @@ class OrdersWindow(ctk.CTkToplevel):
         self.create_widgets()
 
     def create_widgets(self):
-        self.orders_listbox = Listbox(self)
-        self.orders_listbox.pack(fill='both', expand=True, padx=20, pady=20)
+        self.tree = ttk.Treeview(self, columns=("ID", "Vardas", "Telefonas", "El. paštas", "Data", "Būsena", "Aprašymas"), show='headings')
+        self.tree.heading("ID", text="ID")
+        self.tree.heading("Vardas", text="Vardas")
+        self.tree.heading("Telefonas", text="Telefonas")
+        self.tree.heading("El. paštas", text="El. paštas")
+        self.tree.heading("Data", text="Data")
+        self.tree.heading("Būsena", text="Būsena")
+        self.tree.heading("Aprašymas", text="Aprašymas")
+        self.tree.column("ID", width=10)
+        self.tree.column("Vardas", width=150)
+        self.tree.column("Telefonas", width=100)
+        self.tree.column("El. paštas", width=150)
+        self.tree.column("Data", width=100)
+        self.tree.column("Būsena", width=100)
+        self.tree.column("Aprašymas", width=200)
+        self.tree.pack(fill='both', expand=True, padx=20, pady=20)
 
         self.load_orders()
 
@@ -249,17 +273,11 @@ class OrdersWindow(ctk.CTkToplevel):
         conn.close()
 
         for order in orders:
-            self.orders_listbox.insert('end', f"ID: {order[0]}, Vardas: {order[1]}, Telefonas: {order[2]}, El. paštas: {order[3]}, Data: {order[4]}, Būsena: {order[5]}, Aprašymas: {order[6]}")
+            self.tree.insert('', 'end', values=order)
 
     def select_order(self):
-        selected_order = self.orders_listbox.get(self.orders_listbox.curselection())
-        order_id = selected_order.split(",")[0].split(":")[1].strip()
-
-        conn = sqlite3.connect('orders.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
-        order = cursor.fetchone()
-        conn.close()
+        selected_item = self.tree.selection()[0]
+        order = self.tree.item(selected_item, 'values')
 
         self.master.id_entry.delete(0, 'end')
         self.master.id_entry.insert(0, order[0])
