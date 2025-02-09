@@ -59,8 +59,8 @@ class MainWindow(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
         self.title('Užsakymai')
-        self.geometry('1200x600')
-        self.minsize(600, 400)
+        self.geometry('560x430')
+        self.minsize(560, 430)
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.update_idletasks()
@@ -115,13 +115,16 @@ class MainWindow(ctk.CTkToplevel):
         self.description_label = ctk.CTkLabel(self.form_frame, text="Aprašymas:")
         self.description_label.grid(row=4, column=0, padx=5, pady=5)
         self.description_entry = ctk.CTkTextbox(self.form_frame, width=400, height=100, wrap='word')
-        self.description_entry.grid(row=4, column=1, padx=5, pady=5, columnspan=3)
+        self.description_entry.grid(row=4, column=1, padx=5, pady=10, columnspan=3)
 
         self.submit_button = ctk.CTkButton(self.form_frame, width=420, text="Pridėti naują užsakymą", command=self.submit_order)
-        self.submit_button.grid(row=5, column=0, columnspan=4, pady=10, sticky='e')
+        self.submit_button.grid(row=5, column=0, columnspan=4, pady=2, sticky='e')
 
         self.update_button = ctk.CTkButton(self.form_frame, width=420, text="Atnaujinti užsakymą", command=self.update_order)
-        self.update_button.grid(row=6, column=0, columnspan=4, pady=0, sticky='e')
+        self.update_button.grid(row=6, column=0, columnspan=4, pady=2, sticky='e')
+
+        self.update_button = ctk.CTkButton(self.form_frame, width=420, text="Siųsti SMS pranešimą", command=self.message_order)
+        self.update_button.grid(row=7, column=0, columnspan=4, pady=2, sticky='e')
 
         def delete_previous_word(event):
             widget = event.widget
@@ -229,6 +232,13 @@ class MainWindow(ctk.CTkToplevel):
         orders_window = OrdersWindow(self)
         orders_window.grab_set()
 
+    def message_order(self):
+        phone_number = self.phone_entry.get()
+        if phone_number:
+            MessageWindow(self, phone_number)
+        else:
+            messagebox.showwarning("Klaida", "Neįvedėte telefono numerio!")
+
     def on_closing(self):
         self.destroy()
         self.master.destroy()
@@ -275,7 +285,7 @@ class OrdersWindow(ctk.CTkToplevel):
 
         self.load_orders()
 
-        self.select_button = ctk.CTkButton(self, width=420, text="Pasirinkti užsakymą", command=self.select_order)
+        self.select_button = ctk.CTkButton(self, width=420, text="Redaguoti užsakymą", command=self.select_order)
         self.select_button.pack(pady=5)
 
         self.select_button = ctk.CTkButton(self, width=420, text="Panaikinti užsakymą", command=self.remove_order, fg_color="#960e0e", hover_color="#750b0b")
@@ -333,13 +343,82 @@ class OrdersWindow(ctk.CTkToplevel):
         selected_item = self.tree.selection()[0]
         order_id = self.tree.item(selected_item, 'values')[0]
 
-        conn = sqlite3.connect('orders.db')
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM orders WHERE id = ?", (order_id,))
-        conn.commit()
-        conn.close()
+        if messagebox.askyesno("Panaikinti užsakymą", "Ar tikrai norite visam laikui panaikinti\nšį užsakymą iš duomenų bazės?"):
+            conn = sqlite3.connect('orders.db')
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM orders WHERE id = ?", (order_id,))
+            conn.commit()
+            conn.close()
 
-        self.load_orders()
+            self.load_orders()
+
+class MessageWindow(ctk.CTkToplevel):
+    def __init__(self, parent, phone_number):
+        super().__init__(parent)
+        self.title('SMS pranešimas')
+        self.geometry('400x240')
+        self.minsize(400, 240)
+
+        self.update_idletasks()
+        width = self.winfo_width()
+        height = self.winfo_height()
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f'{width}x{height}+{x}+{y}')
+
+        self.grab_set()
+
+        self.phone_number = phone_number
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        self.message_examples = ["UŽREGISTRUOTA", "VYKDOMA", "BAIGTA"]
+        self.message = {
+            "UŽREGISTRUOTA": "Sveiki, jūsų užsakymas buvo sėkmingai užregistruotas. Mes pradėsime jį vykdyti netrukus.",
+            "VYKDOMA": "Sveiki, jūsų užsakymas šiuo metu yra vykdomas. Mes informuosime jus, kai jis bus baigtas.",
+            "BAIGTA": "Sveiki, jūsų užsakymas buvo sėkmingai baigtas. Prašome atvykti atsiimti."
+        }
+        self.examples_combobox = ctk.CTkComboBox(self, width=200, values=self.message_examples, command=self.insert_example)
+        self.examples_combobox.set("Pranešimo šablonas")
+        self.examples_combobox.pack(pady=5)
+
+        self.message_entry = ctk.CTkTextbox(self, width=350, height=150, wrap='word')
+        self.message_entry.pack(pady=5)
+
+        self.button_frame = ctk.CTkFrame(self)
+        self.button_frame.pack(pady=5)
+
+        self.cancel_button = ctk.CTkButton(self.button_frame, text="Atšaukti", command=self.destroy, fg_color="#960e0e", hover_color="#750b0b")
+        self.cancel_button.pack(side='left', padx=5)
+
+        self.send_button = ctk.CTkButton(self.button_frame, text="Siųsti pranešimą", command=self.send_message)
+        self.send_button.pack(side='left', padx=5)
+
+        def delete_previous_word(event):
+            widget = event.widget
+            index = widget.index("insert")
+            prev_space = widget.search(r'\s', index, stopindex="1.0", backwards=True, regexp=True)
+            if prev_space:
+                widget.delete(prev_space + "+2c", index)
+            else:
+                widget.delete("1.0", index)
+
+        self.message_entry.bind("<Control-BackSpace>", delete_previous_word)
+
+    def insert_example(self, event):
+        selected_example = self.examples_combobox.get()
+        message = self.message.get(selected_example, "")
+        self.message_entry.delete("1.0", 'end')
+        self.message_entry.insert("1.0", message)
+
+    def send_message(self):
+        message = self.message_entry.get("1.0", 'end').strip()
+        if message:
+            messagebox.showinfo("Pranešimas išsiųstas", f"Pranešimas \"{message}\" išsiųstas į {self.phone_number}.")
+            self.destroy()
+        else:
+            messagebox.showwarning("Klaida", "Pranešimas negali būti tuščias.")
 
 if __name__ == "__main__":
     ctk.set_appearance_mode("dark")
