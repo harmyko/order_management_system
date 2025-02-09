@@ -1,7 +1,7 @@
 import customtkinter as ctk
 import sqlite3
 import hashlib
-from tkinter import messagebox, ttk
+from tkinter import messagebox, ttk, BooleanVar
 from datetime import datetime
 
 class LoginWindow(ctk.CTk):
@@ -82,7 +82,7 @@ class MainWindow(ctk.CTkToplevel):
         self.id_entry.grid(row=0, column=1, padx=5, pady=5, sticky='w')
         self.id_entry.insert(0, self.get_next_id())
 
-        self.view_orders_button = ctk.CTkButton(self.form_frame, width=270, text="Peržiūrėti užsakymus", command=self.open_orders_window)
+        self.view_orders_button = ctk.CTkButton(self.form_frame, width=270, text="Užsakymų sąrašas", command=self.open_orders_window)
         self.view_orders_button.grid(row=0, column=2, columnspan=2, pady=10, sticky='e')
 
         self.name_label = ctk.CTkLabel(self.form_frame, text="Vardas:")
@@ -244,36 +244,70 @@ class OrdersWindow(ctk.CTkToplevel):
 
     def create_widgets(self):
         self.tree = ttk.Treeview(self, columns=("ID", "Vardas", "Telefonas", "El. paštas", "Data", "Būsena", "Aprašymas"), show='headings')
-        self.tree.heading("ID", text="ID")
+        self.tree.heading("ID", text="ID", command=lambda: self.sort_column("ID", False))
         self.tree.heading("Vardas", text="Vardas")
         self.tree.heading("Telefonas", text="Telefonas")
         self.tree.heading("El. paštas", text="El. paštas")
-        self.tree.heading("Data", text="Data")
-        self.tree.heading("Būsena", text="Būsena")
+        self.tree.heading("Data", text="Data", command=lambda: self.sort_column("Data", False))
+        self.tree.heading("Būsena", text="Būsena", command=lambda: self.sort_column("Būsena", False))
         self.tree.heading("Aprašymas", text="Aprašymas")
-        self.tree.column("ID", width=10)
+        self.tree.column("ID", width=50)
         self.tree.column("Vardas", width=150)
         self.tree.column("Telefonas", width=100)
         self.tree.column("El. paštas", width=150)
         self.tree.column("Data", width=100)
         self.tree.column("Būsena", width=100)
         self.tree.column("Aprašymas", width=200)
-        self.tree.pack(fill='both', expand=True, padx=20, pady=20)
+        self.tree.pack(fill='both', expand=True, padx=5, pady=5)
+
+        self.show_uzregistruotas_var = BooleanVar(value=True)
+        self.show_vykdomas_var = BooleanVar(value=True)
+        self.show_baigtas_var = BooleanVar(value=True)
+
+        self.show_uzregistruotas_check = ctk.CTkCheckBox(self, text="Užregistruotas", variable=self.show_uzregistruotas_var, command=self.filter_orders)
+        self.show_uzregistruotas_check.pack(side='left', padx=10, pady=5)
+
+        self.show_vykdomas_check = ctk.CTkCheckBox(self, text="Vykdomas", variable=self.show_vykdomas_var, command=self.filter_orders)
+        self.show_vykdomas_check.pack(side='left', padx=10, pady=5)
+
+        self.show_baigtas_check = ctk.CTkCheckBox(self, text="Baigtas", variable=self.show_baigtas_var, command=self.filter_orders)
+        self.show_baigtas_check.pack(side='left', padx=10, pady=5)
 
         self.load_orders()
 
-        self.select_button = ctk.CTkButton(self, text="Pasirinkti užsakymą", command=self.select_order)
-        self.select_button.pack(pady=10)
+        self.select_button = ctk.CTkButton(self, width=420, text="Pasirinkti užsakymą", command=self.select_order)
+        self.select_button.pack(pady=5)
+
+        self.select_button = ctk.CTkButton(self, width=420, text="Panaikinti užsakymą", command=self.remove_order, fg_color="#960e0e", hover_color="#750b0b")
+        self.select_button.pack(pady=5)     
 
     def load_orders(self):
         conn = sqlite3.connect('orders.db')
         cursor = conn.cursor()
         cursor.execute("SELECT id, name, phone_number, email_address, date, current_order_state, description FROM orders")
-        orders = cursor.fetchall()
+        self.orders = cursor.fetchall()
         conn.close()
 
-        for order in orders:
-            self.tree.insert('', 'end', values=order)
+        self.filter_orders()
+
+    def filter_orders(self):
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        for order in self.orders:
+            if ((self.show_uzregistruotas_var.get() and order[5] == "Užregistruotas") or
+                (self.show_vykdomas_var.get() and order[5] == "Vykdomas") or
+                (self.show_baigtas_var.get() and order[5] == "Baigtas")):
+                self.tree.insert('', 'end', values=order)
+
+    def sort_column(self, col, reverse):
+        data = [(self.tree.set(child, col), child) for child in self.tree.get_children('')]
+        data.sort(reverse=reverse)
+
+        for index, (val, child) in enumerate(data):
+            self.tree.move(child, '', index)
+
+        self.tree.heading(col, command=lambda: self.sort_column(col, not reverse))
 
     def select_order(self):
         selected_item = self.tree.selection()[0]
@@ -294,6 +328,18 @@ class OrdersWindow(ctk.CTkToplevel):
         self.master.description_entry.insert("1.0", order[6])
 
         self.destroy()
+
+    def remove_order(self):
+        selected_item = self.tree.selection()[0]
+        order_id = self.tree.item(selected_item, 'values')[0]
+
+        conn = sqlite3.connect('orders.db')
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM orders WHERE id = ?", (order_id,))
+        conn.commit()
+        conn.close()
+
+        self.load_orders()
 
 if __name__ == "__main__":
     ctk.set_appearance_mode("dark")
