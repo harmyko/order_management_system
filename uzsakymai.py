@@ -337,6 +337,9 @@ class OrdersWindow(ctk.CTkToplevel):
         self.master.description_entry.delete("1.0", 'end')
         self.master.description_entry.insert("1.0", order[6])
 
+        self.master.deiconify()
+        self.master.lift()
+
         self.destroy()
 
     def remove_order(self):
@@ -415,7 +418,7 @@ class MessageWindow(ctk.CTkToplevel):
     def send_message(self):
         message = self.message_entry.get("1.0", 'end').strip()
         if message:
-            messagebox.showinfo("Pranešimas išsiųstas", f"Pranešimas \"{message}\" išsiųstas į {self.phone_number}.")
+            messagebox.showinfo("Pranešimas išsiųstas", f"Pranešimas \"{message}\" išsiųstas numeriu {self.phone_number}.")
             self.destroy()
         else:
             messagebox.showwarning("Klaida", "Pranešimas negali būti tuščias.")
