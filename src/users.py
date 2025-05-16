@@ -1,7 +1,10 @@
 import sqlite3
 import hashlib
 
-conn = sqlite3.connect("vartotojai.db")
+# This is the users' database management module
+# Uncomment lines at the bottom of this file to edit the users' database.
+
+conn = sqlite3.connect("../data/users.db")
 cursor = conn.cursor()
 
 cursor.execute('''
@@ -38,6 +41,8 @@ def remove_user(username):
     cursor.execute("DELETE FROM users WHERE username = ?", (username,))
     conn.commit()
     print("User removed successfully!")
+
+# uncomment lines below & modify parameters & run the program to edit users
 
 # add_user("admin", "admin")
 # remove_user("admin")

@@ -31,15 +31,29 @@ class LoginWindow(ctk.CTk):
         self.login_button = ctk.CTkButton(self, text="Prisijungti", command=self.login)
         self.login_button.pack(pady=20)
 
-        # self.bind('<Return>', lambda event: self.login())
-        self.bind('<Return>', lambda event: self.open_app())
+        conn = sqlite3.connect('../data/orders.db')
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS orders (
+                id INTEGER PRIMARY KEY,
+                name TEXT,
+                phone_number TEXT,
+                email_address TEXT,
+                date TEXT,
+                current_order_state TEXT,
+                description TEXT
+            )
+        """)
+        conn.close()
+
+        self.bind('<Return>', lambda event: self.login())
 
     def login(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
         password_hash = hashlib.sha256(password.encode()).hexdigest()
 
-        conn = sqlite3.connect('vartotojai.db')
+        conn = sqlite3.connect('../data/users.db')
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM users WHERE username = ? AND password_hash = ?", (username, password_hash))
         result = cursor.fetchone()
@@ -138,7 +152,7 @@ class MainWindow(ctk.CTkToplevel):
         self.description_entry.bind("<Control-BackSpace>", delete_previous_word)
 
     def get_next_id(self):
-        conn = sqlite3.connect('orders.db')
+        conn = sqlite3.connect('../data/orders.db')
         cursor = conn.cursor()
         cursor.execute("SELECT MAX(id) FROM orders")
         result = cursor.fetchone()
@@ -156,7 +170,7 @@ class MainWindow(ctk.CTkToplevel):
         state = self.state_entry.get()
         description = self.description_entry.get("1.0", 'end').strip()
 
-        conn = sqlite3.connect('orders.db')
+        conn = sqlite3.connect('../data/orders.db')
         cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS orders (
@@ -189,7 +203,7 @@ class MainWindow(ctk.CTkToplevel):
         state = self.state_entry.get()
         description = self.description_entry.get("1.0", 'end').strip()
 
-        conn = sqlite3.connect('orders.db')
+        conn = sqlite3.connect('../data/orders.db')
         cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS orders (
@@ -292,7 +306,7 @@ class OrdersWindow(ctk.CTkToplevel):
         self.select_button.pack(pady=5)     
 
     def load_orders(self):
-        conn = sqlite3.connect('orders.db')
+        conn = sqlite3.connect('../data/orders.db')
         cursor = conn.cursor()
         cursor.execute("SELECT id, name, phone_number, email_address, date, current_order_state, description FROM orders")
         self.orders = cursor.fetchall()
@@ -347,7 +361,7 @@ class OrdersWindow(ctk.CTkToplevel):
         order_id = self.tree.item(selected_item, 'values')[0]
 
         if messagebox.askyesno("Panaikinti užsakymą", "Ar tikrai norite visam laikui panaikinti\nšį užsakymą iš duomenų bazės?"):
-            conn = sqlite3.connect('orders.db')
+            conn = sqlite3.connect('../data/orders.db')
             cursor = conn.cursor()
             cursor.execute("DELETE FROM orders WHERE id = ?", (order_id,))
             conn.commit()
