@@ -5,7 +5,7 @@ __pycache__/
 dist/
 build/
 
-data/orders.db
+*.db
 
 .idea/
 .vscode/

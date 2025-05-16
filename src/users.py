@@ -1,8 +1,14 @@
+import os
 import sqlite3
 import hashlib
 
 # This is the users' database management module
 # Uncomment lines at the bottom of this file to edit the users' database.
+
+data_dir = "../data"
+if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
+    print(f"Created directory: {data_dir}")
 
 conn = sqlite3.connect("../data/users.db")
 cursor = conn.cursor()
