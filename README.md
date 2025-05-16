@@ -1,6 +1,6 @@
 # Order Management System
 
-## A simple desktop application for managing customer orders built with Python and CustomTkinter.
+## A simple desktop application for managing customer orders built with Python.
 
 ![image](https://github.com/user-attachments/assets/f1dd371b-0212-4f93-b8ef-f659732ed8b5)
 
