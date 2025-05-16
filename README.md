@@ -34,16 +34,9 @@ A demonstrational video: https://youtu.be/y6Ei50GOazk.
 
 3. Run the application:
    ```
+   cd src
    python orders.py
    ```
-
-## Project Structure
-
-- `orders.py` - Main application file
-- `users.py` - User management module
-- `data/` - Directory containing database files
-  - `orders.db` - Orders database
-  - `users.db` - User credentials database
 
 ## Usage
 
@@ -64,3 +57,12 @@ To add users to the system, uncomment and modify the appropriate lines in `users
 3. View and filter existing orders
 4. Update order status
 5. Send SMS notifications to customers
+
+## Project Structure
+
+- `src/` - Directory containing source code
+   - `orders.py` - Main application file
+   - `users.py` - User management module
+- `data/` - Directory containing database files
+  - `orders.db` - Orders database
+  - `users.db` - User credentials database
