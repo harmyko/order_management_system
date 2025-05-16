@@ -24,7 +24,7 @@ A demonstrational video: https://youtu.be/y6Ei50GOazk.
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/order-management-system.git
+   git clone https://github.com/harmyko/order_management_system.git
    ```
 
 2. Install dependencies:
